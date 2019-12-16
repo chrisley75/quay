@@ -2,7 +2,7 @@
 import hashlib
 import tarfile
 
-from cStringIO import StringIO
+from io import StringIO
 
 import binascii
 import bencode
@@ -188,7 +188,7 @@ def test_basic_push_pull_by_manifest(
     options = ProtocolOptions()
     options.require_matching_manifest_type = True
 
-    digests = [str(manifest.digest) for manifest in result.manifests.values()]
+    digests = [str(manifest.digest) for manifest in list(result.manifests.values())]
     manifest_protocol.pull(
         liveserver_session,
         "devtable",
@@ -224,7 +224,7 @@ def test_basic_push_by_manifest_digest(
     expected_failure = None if manifest_protocol.schema == "schema1" else Failures.UNKNOWN_TAG
 
     # Pull the repository by digests to verify.
-    digests = [str(manifest.digest) for manifest in result.manifests.values()]
+    digests = [str(manifest.digest) for manifest in list(result.manifests.values())]
     manifest_protocol.pull(
         liveserver_session,
         "devtable",
@@ -835,7 +835,7 @@ def test_image_replication(
         )
 
         # Ensure that entries were created for each image.
-        for image_id in result.image_ids.values():
+        for image_id in list(result.image_ids.values()):
             r = registry_server_executor.on(liveserver).get_storage_replication_entry(image_id)
             assert r.text == "OK"
 
@@ -872,7 +872,7 @@ def test_image_replication_empty_layers(
         )
 
         # Ensure that entries were created for each image.
-        for image_id in result.image_ids.values():
+        for image_id in list(result.image_ids.values()):
             r = registry_server_executor.on(liveserver).get_storage_replication_entry(image_id)
             assert r.text == "OK"
 
@@ -1835,7 +1835,7 @@ EXPECTED_ACI_MANIFEST = {
         "group": "root",
         "user": "root",
         "workingDirectory": "/",
-        "exec": [u"/bin/sh", u"-c", u'""hello""'],
+        "exec": ["/bin/sh", "-c", '""hello""'],
         "isolators": [],
         "eventHandlers": [],
         "ports": [],
@@ -3133,7 +3133,7 @@ def test_attempt_pull_by_manifest_digest_for_deleted_tag(
     result = manifest_protocol.push(
         liveserver_session, "devtable", "newrepo", "latest", basic_images, credentials=credentials
     )
-    digests = [str(manifest.digest) for manifest in result.manifests.values()]
+    digests = [str(manifest.digest) for manifest in list(result.manifests.values())]
     assert len(digests) == 1
 
     # Ensure we can pull by tag.
