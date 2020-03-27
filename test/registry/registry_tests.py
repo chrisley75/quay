@@ -2,7 +2,7 @@
 import hashlib
 import tarfile
 
-from io import StringIO
+from io import BytesIO
 
 import binascii
 import bencode
@@ -366,18 +366,18 @@ def test_middle_layer_different_sha(v2_protocol, v1_protocol, liveserver_session
   """
     credentials = ("devtable", "password")
     first_images = [
-        Image(id="baseimage", parent_id=None, size=None, bytes=layer_bytes_for_contents("base")),
+        Image(id="baseimage", parent_id=None, size=None, bytes=layer_bytes_for_contents(b"base")),
         Image(
             id="middleimage",
             parent_id="baseimage",
             size=None,
-            bytes=layer_bytes_for_contents("middle"),
+            bytes=layer_bytes_for_contents(b"middle"),
         ),
         Image(
             id="leafimage",
             parent_id="middleimage",
             size=None,
-            bytes=layer_bytes_for_contents("leaf"),
+            bytes=layer_bytes_for_contents(b"leaf"),
         ),
     ]
 
@@ -398,7 +398,7 @@ def test_middle_layer_different_sha(v2_protocol, v1_protocol, liveserver_session
         id="middleimage",
         parent_id="baseimage",
         size=None,
-        bytes=layer_bytes_for_contents("different middle bytes"),
+        bytes=layer_bytes_for_contents(b"different middle bytes"),
     )
 
     # Push and pull the image, ensuring that the produced ID for the middle and leaf layers
@@ -480,7 +480,7 @@ def test_push_pull_logging(
                 id="startimage",
                 parent_id=None,
                 size=None,
-                bytes=layer_bytes_for_contents("start image"),
+                bytes=layer_bytes_for_contents(b"start image"),
             )
         ]
         pusher.push(
@@ -950,7 +950,7 @@ def test_invalid_parent(legacy_pusher, liveserver_session, app_reloader):
             id="childimage",
             parent_id="parentimage",
             size=None,
-            bytes=layer_bytes_for_contents("child"),
+            bytes=layer_bytes_for_contents(b"child"),
         ),
     ]
 
@@ -974,10 +974,10 @@ def test_wrong_image_order(legacy_pusher, liveserver_session, app_reloader):
             id="childimage",
             parent_id="parentimage",
             size=None,
-            bytes=layer_bytes_for_contents("child"),
+            bytes=layer_bytes_for_contents(b"child"),
         ),
         Image(
-            id="parentimage", parent_id=None, size=None, bytes=layer_bytes_for_contents("parent")
+            id="parentimage", parent_id=None, size=None, bytes=layer_bytes_for_contents(b"parent")
         ),
     ]
 
@@ -1017,7 +1017,7 @@ def test_labels(labels, manifest_protocol, liveserver_session, api_caller, app_r
         Image(
             id="theimage",
             parent_id=None,
-            bytes=layer_bytes_for_contents("image"),
+            bytes=layer_bytes_for_contents(b"image"),
             config={"Labels": {key: value for (key, value, _) in labels}},
         ),
     ]
@@ -1063,7 +1063,7 @@ def test_expiration_label(
         Image(
             id="theimage",
             parent_id=None,
-            bytes=layer_bytes_for_contents("image"),
+            bytes=layer_bytes_for_contents(b"image"),
             config={"Labels": {"quay.expires-after": label_value}},
         ),
     ]
@@ -1722,7 +1722,7 @@ def test_multilayer_squashed_images(
     response = liveserver_session.get("/c1/squash/devtable/newrepo/latest", auth=credentials)
     assert response.status_code == 200
 
-    tar = tarfile.open(fileobj=StringIO(response.content))
+    tar = tarfile.open(fileobj=BytesIO(response.content))
 
     # Verify the squashed image.
     expected_image_id = next(
@@ -1793,7 +1793,7 @@ def test_squashed_images(
         response = liveserver_session.get("/c1/squash/devtable/newrepo/latest", auth=credentials)
         assert response.status_code == 200
 
-        tar = tarfile.open(fileobj=StringIO(response.content))
+        tar = tarfile.open(fileobj=BytesIO(response.content))
 
         # Verify the squashed image.
         expected_image_id = next(
@@ -1824,7 +1824,7 @@ def test_squashed_images(
         assert tar.getnames() == ["contents"]
 
         # Check the contents.
-        assert tar.extractfile("contents").read() == "some contents"
+        assert tar.extractfile("contents").read() == b"some contents"
 
 
 EXPECTED_ACI_MANIFEST = {
@@ -1884,10 +1884,11 @@ def test_aci_conversion(
             "/c1/aci/server_name/devtable/newrepo/latest/aci/linux/amd64", auth=credentials
         )
         assert response.status_code == 200
-        tar = tarfile.open(fileobj=StringIO(response.content))
+        print("TEST:", type(response.content), response.content)
+        tar = tarfile.open(fileobj=BytesIO(response.content))
         assert set(tar.getnames()) == {"manifest", "rootfs", "rootfs/contents"}
 
-        assert tar.extractfile("rootfs/contents").read() == "some contents"
+        assert tar.extractfile("rootfs/contents").read() == b"some contents"
         loaded = json.loads(tar.extractfile("manifest").read())
         for annotation in loaded["app"]["annotations"]:
             if annotation["name"] == "quay.io/derived-image":
@@ -1957,10 +1958,10 @@ def test_aci_conversion_manifest_list(
         "/c1/aci/server_name/devtable/newrepo/latest/aci/linux/amd64", auth=credentials
     )
     assert response.status_code == 200
-    tar = tarfile.open(fileobj=StringIO(response.content))
+    tar = tarfile.open(fileobj=BytesIO(response.content))
     assert set(tar.getnames()) == {"manifest", "rootfs", "rootfs/contents"}
 
-    assert tar.extractfile("rootfs/contents").read() == "some contents"
+    assert tar.extractfile("rootfs/contents").read() == b"some contents"
 
     loaded = json.loads(tar.extractfile("manifest").read())
     for annotation in loaded["app"]["annotations"]:
@@ -2328,7 +2329,7 @@ def test_push_pull_same_blobs(pusher, puller, liveserver_session, app_reloader):
     """ Test: Push and pull of an image to a new repository where a blob is shared between layers. """
     credentials = ("devtable", "password")
 
-    layer_bytes = layer_bytes_for_contents("some contents")
+    layer_bytes = layer_bytes_for_contents(b"some contents")
     images = [
         Image(id="parentid", bytes=layer_bytes, parent_id=None),
         Image(id="someid", bytes=layer_bytes, parent_id="parentid"),
@@ -2705,7 +2706,7 @@ def test_squashed_images_empty_layer(
     response = liveserver_session.get("/c1/squash/devtable/newrepo/latest", auth=credentials)
     assert response.status_code == 200
 
-    tar = tarfile.open(fileobj=StringIO(response.content))
+    tar = tarfile.open(fileobj=BytesIO(response.content))
 
     # Verify the squashed image.
     expected_image_id = next(
@@ -2790,7 +2791,7 @@ def test_squashed_image_manifest_list(
     assert response.status_code == 200
 
     # Verify the squashed image.
-    tar = tarfile.open(fileobj=StringIO(response.content))
+    tar = tarfile.open(fileobj=BytesIO(response.content))
     expected_image_id = next(
         (name for name in tar.getnames() if not "/" in name and name != "repositories")
     )
